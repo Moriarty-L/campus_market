@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>校园二手街 - 绿色校园集市</title>
+    <title>HNU校园二手街 - 绿色校园集市</title>
     <!-- 引入 Element Plus CSS -->
     <link
       rel="stylesheet"
@@ -129,6 +129,53 @@
       .sidebar {
         width: 200px;
         flex-shrink: 0;
+      }
+
+      /* 侧边栏搜索样式优化 */
+      .sidebar-search {
+        margin-bottom: 14px;
+      }
+
+      .sidebar .el-input .el-input__inner {
+        height: 38px;
+        border-radius: 10px;
+        padding-left: 12px;
+        box-shadow: 0 4px 12px rgba(12, 24, 48, 0.06);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+      }
+
+      .sidebar .el-input .el-input__inner:focus,
+      .sidebar .el-input:hover .el-input__inner {
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      }
+
+      .sidebar .el-menu {
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+      }
+
+      /* 排序控件样式 */
+      .sidebar-sort {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .sidebar-sort .sort-label {
+        color: #909399;
+        font-size: 13px;
+        min-width: 40px;
+      }
+      .sidebar-sort .el-radio-group {
+        flex: 1;
+      }
+
+      @media (max-width: 992px) {
+        .sidebar-sort {
+          margin-bottom: 8px;
+        }
       }
 
       .home-main {
@@ -398,7 +445,7 @@
           <!-- Logo -->
           <div class="logo">
             <i class="el-icon-s-shop logo-icon"></i>
-            <span>校园二手街</span>
+            <span>HNU校园二手街</span>
           </div>
 
           <!-- 搜索框 -->
@@ -473,6 +520,38 @@
           <div class="home-layout">
             <!-- 左侧分类菜单 -->
             <aside class="sidebar">
+              <!-- 侧边栏搜索 -->
+              <div class="sidebar-search">
+                <el-input
+                  placeholder="在分类中搜索..."
+                  v-model="sidebarSearch"
+                  clearable
+                  size="small"
+                  @keyup.enter="handleCategorySearch"
+                >
+                  <template #append>
+                    <el-button
+                      icon="el-icon-search"
+                      @click="handleCategorySearch"
+                    ></el-button>
+                  </template>
+                </el-input>
+              </div>
+
+              <!-- 排序控件 -->
+              <div class="sidebar-sort">
+                <label class="sort-label">排序：</label>
+                <el-radio-group
+                  v-model="sidebarSort"
+                  size="small"
+                  @change="handleSortChange"
+                >
+                  <el-radio-button label="default">默认</el-radio-button>
+                  <el-radio-button label="hot">热度</el-radio-button>
+                  <el-radio-button label="recommend">推荐</el-radio-button>
+                </el-radio-group>
+              </div>
+
               <el-menu
                 default-active="all"
                 @select="handleCategorySelect"
@@ -488,7 +567,7 @@
                     <span>商品分类</span>
                   </template>
                   <el-menu-item
-                    v-for="category in categories"
+                    v-for="category in filteredCategories"
                     :key="category.id"
                     :index="category.id"
                   >
@@ -540,7 +619,7 @@
               <h2 style="margin: 30px 0 20px">最新商品</h2>
               <div class="product-grid">
                 <el-card
-                  v-for="product in filteredProducts"
+                  v-for="product in displayedProducts"
                   :key="product.id"
                   class="product-card"
                   shadow="hover"
@@ -1176,7 +1255,7 @@
           <div class="auth-card">
             <div class="auth-logo">
               <i class="el-icon-s-shop" style="font-size: 48px"></i>
-              <h2 style="margin-top: 10px">校园二手街</h2>
+              <h2 style="margin-top: 10px">HNU校园二手街</h2>
             </div>
             <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef">
               <el-form-item prop="username">
@@ -1296,7 +1375,7 @@
       <footer class="footer-container">
         <div class="footer-content">
           <div class="footer-section">
-            <h3 class="footer-title">校园二手街</h3>
+            <h3 class="footer-title">HNU校园二手街</h3>
             <div class="footer-links">
               <a href="#">关于我们</a>
               <a href="#">联系我们</a>
@@ -1333,7 +1412,7 @@
           </div>
           <div class="copyright">
             <p>
-              © 2025 校园二手街 版权所有 |
+              © 2025 HNU校园二手街 版权所有 |
               致力于打造绿色、安全、便捷的校园二手交易平台
             </p>
             <p>校园服务热线：13505907916 | 邮箱：2558975235@qq.com</p>
@@ -1846,6 +1925,46 @@
             );
           });
 
+          // 侧边栏分类搜索
+          const sidebarSearch = ref("");
+          const filteredCategories = computed(() => {
+            if (!sidebarSearch.value) return categories.value;
+            return categories.value.filter((c) =>
+              c.name.toLowerCase().includes(sidebarSearch.value.toLowerCase())
+            );
+          });
+          const handleCategorySearch = () => {
+            if (filteredCategories.value.length > 0) {
+              // 默认选择第一个匹配分类（将 id 转为字符串以匹配 el-menu 的 index）
+              handleCategorySelect(filteredCategories.value[0].id.toString());
+            } else {
+              ElMessage.info("未找到匹配分类");
+            }
+          };
+
+          // 侧边栏排序
+          const sidebarSort = ref("default");
+          const handleSortChange = () => {
+            // 简单提示，实际可以埋点或触发更复杂的逻辑
+            // 这里不改变页面，只更新排序
+          };
+
+          // 最终展示的商品，基于搜索结果并应用排序
+          const displayedProducts = computed(() => {
+            const list = [...filteredProducts.value];
+            if (sidebarSort.value === "hot") {
+              return list.sort(
+                (a, b) => (b.viewCount || 0) - (a.viewCount || 0)
+              );
+            }
+            if (sidebarSort.value === "recommend") {
+              return list.sort(
+                (a, b) => (b.sellerRating || 0) - (a.sellerRating || 0)
+              );
+            }
+            return list;
+          });
+
           // 订单总价
           const totalPrice = computed(() => {
             return orderItems.value.reduce((sum, item) => {
@@ -2133,6 +2252,14 @@
             carouselItems,
             products,
             filteredProducts,
+            // 侧边栏分类搜索相关
+            sidebarSearch,
+            filteredCategories,
+            handleCategorySearch,
+            // 侧边栏排序相关
+            sidebarSort,
+            displayedProducts,
+            handleSortChange,
             currentProduct,
             publishForm,
             publishRules,
@@ -2198,4 +2325,3 @@
     </script>
   </body>
 </html>
-
